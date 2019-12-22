@@ -4,13 +4,15 @@ const formidable = require("express-formidable");
 const cors = require("cors");
 const mailgun = require("mailgun-js");
 
+require("dotenv").config();
+
 const app = express();
 
 app.use(formidable());
 
 app.use(cors());
 
-mongoose.connect("mongodb://localhost/meilleur-taux-backend", {
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 });
@@ -29,6 +31,7 @@ const Quote = mongoose.model("Quote", {
   //   file: Number
 });
 
+// CREATE NEW QUOTE
 app.post("/add-quote", async (req, res) => {
   try {
     const newQuote = new Quote({
@@ -44,10 +47,16 @@ app.post("/add-quote", async (req, res) => {
       //   file: req.fields.file
     });
     await newQuote.save();
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
 
-    // Send Email
-    const API_KEY = "key-0e0307189be7ed0249cbb73e7909f8cf";
-    const DOMAIN = "mg.lereacteur.io";
+// SEND MAIL
+app.get("/mail", async (req, res) => {
+  try {
+    const API_KEY = process.env.API_KEY;
+    const DOMAIN = process.env.DOMAIN;
     const mg = mailgun({ apiKey: API_KEY, domain: DOMAIN });
     const data = {
       from: "Le Reacteur <postmaster@" + DOMAIN + ">",
@@ -58,13 +67,12 @@ app.post("/add-quote", async (req, res) => {
     mg.messages().send(data, function(error, body) {
       console.log(body);
     });
-
     res.json("OK");
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
-app.listen(4000, () => {
+app.listen(process.env.PORT, () => {
   console.log("Server has started");
 });
